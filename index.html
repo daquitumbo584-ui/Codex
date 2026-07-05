@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cortex CRM - Cloud Database</title>
+    <style>
+        /* Variables de color para Modo Claro */
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #334155;
+            --border: #e2e8f0;
+            --input-bg: #ffffff;
+            --search-bg: #cbd5e1;
+            --th-bg: #f1f5f9;
+        }
+
+        /* Variables de color para Modo Oscuro */
+        [data-theme="dark"] {
+            --primary: #f8fafc;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #cbd5e1;
+            --border: #334155;
+            --input-bg: #1e293b;
+            --search-bg: #334155;
+            --th-bg: #0f172a;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-history-trigger {
+            background: #475569;
+            padding: 10px 15px;
+            font-size: 0.95rem;
+        }
+        .btn-history-trigger:hover { background: #334155; }
+        
+        .btn-theme-toggle {
+            background: #64748b;
+            padding: 10px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .btn-theme-toggle:hover { background: #475569; }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-card h3 { margin: 0; font-size: 0.9rem; color: #64748b; text-transform: uppercase; }
+        .stat-card p { margin: 5px 0 0 0; font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .stats-container { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--input-bg);
+            color: var(--text);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+            transition: background 0.2s;
+        }
+        .btn-submit { background: var(--accent); width: 100%; margin-top: 10px; }
+        .btn-edit { background: #eab308; margin-right: 5px; color: #000; }
+        .btn-delete { background: var(--danger); }
+        .btn-restore { background: var(--success); }
+        .btn-restore:hover { background: #15803d; }
+        .btn-clear-all { background: var(--danger); font-size: 0.9rem; }
+        .btn-clear-all:hover { background: #b91c1c; }
+        
+        .search-box {
+            background: var(--search-bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        th { background-color: var(--th-bg); color: var(--primary); }
+        
+        /* --- VENTANA MODAL --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: var(--card);
+            color: var(--text);
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 850px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            position: relative;
+            border: 1px solid var(--border);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 { margin: 0; color: var(--primary); }
+        .btn-close-modal {
+            background: #94a3b8;
+            font-size: 1.2rem;
+            padding: 5px 10px;
+            color: black;
+        }
+        .btn-close-modal:hover { background: #64748b; }
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <h1 style="margin: 0; color: var(--primary);">👥 Cortex CRM</h1>
+        <div class="header-actions">
+            <button class="btn-theme-toggle" id="themeToggle" onclick="window.cambiarTema()" title="Cambiar Tema">🌙</button>
+            <button class="btn-history-trigger" onclick="window.abrirModal()">📜 Ver Historial</button>
+        </div>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Clientes Activos</h3>
+            <p id="contActivos">...</p>
+        </div>
+        <div class="stat-card">
+            <h3>En Historial (Eliminados)</h3>
+            <p id="contHistorial" style="color: var(--danger);">...</p>
+        </div>
+    </div>
+    
+    <div class="card search-box">
+        <label for="buscar">🔍 <strong>Buscador Inteligente:</strong> (Filtra por Nombre, Teléfono o Email)</label>
+        <input type="text" id="buscar" placeholder="Escribe para buscar...">
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2 id="form-title" style="color: var(--primary);">Registrar Cliente</h2>
+            <form id="clienteForm">
+                <input type="hidden" id="clienteId">
+                <div class="form-group">
+                    <label for="nombre">Nombre Completo:</label>
+                    <input type="text" id="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="telefono">Teléfono:</label>
+                    <input type="tel" id="telefono" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Correo Electrónico:</label>
+                    <input type="email" id="email" required>
+                </div>
+                <button type="submit" id="btn-guardar" class="btn-submit">Guardar Cliente</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2 style="color: var(--primary);">Base de Datos General</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaClientes"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="historialModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📜 Historial de Seguridad (Eliminados)</h2>
+            <button class="btn-close-modal" onclick="window.cerrarModal()">✕</button>
+        </div>
+        <p style="margin-top: 0;"><small>*Sincronizado en tiempo real con Firebase Firestore.</small></p>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Fecha de Eliminación</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaHistorial"></tbody>
+            </table>
+        </div>
+        <div class="modal-footer" id="pieHistorial">
+            <span style="color:#64748b; font-size:0.9rem;">Base de datos remota protegida.</span>
+            <button class="btn-clear-all" id="btnVaciarHistorial">🗑️ Vaciar todo el historial</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+        getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Configuración que proporcionaste
+    const firebaseConfig = {
+        apiKey: "AIzaSyDfGWA1No2gimMDsnDacFYP2hRFoUofYoI",
+        authDomain: "codex-bfd7d.firebaseapp.com",
+        projectId: "codex-bfd7d",
+        storageBucket: "codex-bfd7d.firebasestorage.app",
+        messagingSenderId: "1004510633721",
+        appId: "1:1004510633721:web:d59226398f378420104c28",
+        measurementId: "G-QCVGF6K5QF"
+    };
+
+    // Inicializar Firebase y Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Referencias a Colecciones en la Nube
+    const clientesRef = collection(db, "clientes");
+    const historialRef = collection(db, "historial");
+
+    // Arrays locales para búsquedas rápidas en pantalla
+    let listaClientesLocal = [];
+    let listaHistorialLocal = [];
+
+    // --- ESCUCHADORES EN TIEMPO REAL (onSnapshot) ---
+    // Trae los clientes activos ordenados de forma descendente por creación
+    onSnapshot(clientesRef, (snapshot) => {
+        listaClientesLocal = [];
+        snapshot.forEach(doc => {
+            listaClientesLocal.push({ id: doc.id, ...doc.data() });
+        });
+        renderizarClientes();
+        actualizarContadores();
+    });
+
+    // Trae el historial de eliminados
+    onSnapshot(historialRef, (snapshot) => {
+        listaHistorialLocal = [];
+        snapshot.forEach(doc => {
+            listaHistorialLocal.push({ id: doc.id, ...doc.data() });
+        });
+        renderizarHistorial();
+        actualizarContadores();
+    });
+
+    // --- ENVIAR O MODIFICAR DATOS ---
+    const form = document.getElementById('clienteForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('clienteId').value;
+        const nombre = document.getElementById('nombre').value.trim();
+        const telefono = document.getElementById('telefono').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        if (id) {
+            // Actualizar en Firebase usando el ID de Firestore
+            const clienteDoc = doc(db, "clientes", id);
+            await updateDoc(clienteDoc, { nombre, telefono, email });
+            document.getElementById('form-title').innerText = "Registrar Cliente";
+            document.getElementById('btn-guardar').innerText = "Guardar Cliente";
+            document.getElementById('btn-guardar').style.background = "var(--accent)";
+        } else {
+            // Agregar nuevo documento a Firestore
+            await addDoc(clientesRef, {
+                nombre,
+                telefono,
+                email,
+                timestamp: Date.now()
+            });
+        }
+        form.reset();
+        document.getElementById('clienteId').value = "";
+    });
+
+    // --- MOVER A LA PAPELERA (ELIMINAR GENERAL) ---
+    window.eliminarCliente = async (id) => {
+        const cliente = listaClientesLocal.find(c => c.id === id);
+        if (cliente) {
+            // 1. Agregar a la colección de historial en la nube
+            await addDoc(historialRef, {
+                nombre: cliente.nombre,
+                telefono: cliente.telefono,
+                email: cliente.email,
+                fechaBorrado: new Date().toLocaleString(),
+                timestamp: Date.now()
+            });
+            // 2. Borrar de la colección de activos en la nube
+            await deleteDoc(doc(db, "clientes", id));
+        }
+    };
+
+    // --- RESTAURAR DESDE EL HISTORIAL ---
+    window.restaurarCliente = async (id) => {
+        const registro = listaHistorialLocal.find(h => h.id === id);
+        if (registro) {
+            // 1. Devolver a clientes activos
+            await addDoc(clientesRef, {
+                nombre: registro.nombre,
+                telefono: registro.telefono,
+                email: registro.email,
+                timestamp: Date.now()
+            });
+            // 2. Eliminar del historial de la nube
+            await deleteDoc(doc(db, "historial", id));
+        }
+    };
+
+    // --- VACIAR TODO EL HISTORIAL ---
+    document.getElementById('btnVaciarHistorial').addEventListener('click', async () => {
+        if(confirm("¿Estás seguro de eliminar permanentemente TODO el historial en la nube?")) {
+            // Firestore requiere borrar documento por documento en Web-side JS
+            const promesasBorrado = listaHistorialLocal.map(h => deleteDoc(doc(db, "historial", h.id)));
+            await Promise.all(promesasBorrado);
+        }
+    });
+
+    // Cargar datos para editar en formulario
+    window.prepararModificar = (id) => {
+        const cliente = listaClientesLocal.find(c => c.id === id);
+        if (cliente) {
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('nombre').value = cliente.nombre;
+            document.getElementById('telefono').value = cliente.telefono;
+            document.getElementById('email').value = cliente.email;
+            
+            document.getElementById('form-title').innerText = "Modificando Cliente ✏️";
+            document.getElementById('btn-guardar').innerText = "Actualizar Cambios";
+            document.getElementById('btn-guardar').style.background = "var(--success)";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    // --- RENDERIZADO VISUAL ---
+    function renderizarClientes() {
+        const tabla = document.getElementById('tablaClientes');
+        const queryText = document.getElementById('buscar').value.toLowerCase();
+        tabla.innerHTML = '';
+
+        const filtrados = listaClientesLocal.filter(c => 
+            c.nombre.toLowerCase().includes(queryText) || 
+            c.telefono.toLowerCase().includes(queryText) || 
+            c.email.toLowerCase().includes(queryText)
+        );
+
+        if(filtrados.length === 0) {
+            tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">Sin registros en la nube</td></tr>`;
+            return;
+        }
+
+        filtrados.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${c.nombre}</td>
+                <td>${c.telefono}</td>
+                <td>${c.email}</td>
+                <td>
+                    <button class="btn-edit" onclick="prepararModificar('${c.id}')">Editar ✏️</button>
+                    <button class="btn-delete" onclick="eliminarCliente('${c.id}')">Eliminar 🗑️</button>
+                </td>
+            `;
+            tabla.appendChild(tr);
+        });
+    }
+
+    function renderizarHistorial() {
+        const tablaHistorial = document.getElementById('tablaHistorial');
+        const pieHistorial = document.getElementById('pieHistorial');
+        tablaHistorial.innerHTML = '';
+
+        if(listaHistorialLocal.length === 0) {
+            tablaHistorial.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8;">El historial está vacío</td></tr>`;
+            pieHistorial.style.display = 'none';
+            return;
+        }
+
+        pieHistorial.style.display = 'flex';
+
+        // Ordenar localmente por timestamp descendente para ver los últimos borrados arriba
+        const ordenado = [...listaHistorialLocal].sort((a,b) => b.timestamp - a.timestamp);
+
+        ordenado.forEach(h => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${h.nombre}</td>
+                <td>${h.telefono}</td>
+                <td>${h.email}</td>
+                <td style="color:var(--danger); font-size: 0.85rem;">${h.fechaBorrado || 'Desconocida'}</td>
+                <td>
+                    <button class="btn-restore" onclick="restaurarCliente('${h.id}')">Restaurar 🔄</button>
+                </td>
+            `;
+            tablaHistorial.appendChild(tr);
+        });
+    }
+
+    function actualizarContadores() {
+        document.getElementById('contActivos').innerText = listaClientesLocal.length;
+        document.getElementById('contHistorial').innerText = listaHistorialLocal.length;
+    }
+
+    // Vincular buscador a la función modular
+    document.getElementById('buscar').addEventListener('input', renderizarClientes);
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const temaGuardado = localStorage.getItem('db_tema') || 'light';
+        document.documentElement.setAttribute('data-theme', temaGuardado);
+        document.getElementById('themeToggle').innerText = temaGuardado === 'dark' ? '☀️' : '🌙';
+    });
+
+    function cambiarTema() {
+        const temaActual = document.documentElement.getAttribute('data-theme');
+        let nuevoTema = temaActual === 'light' ? 'dark' : 'light';
+        document.getElementById('themeToggle').innerText = nuevoTema === 'dark' ? '☀️' : '🌙';
+        document.documentElement.setAttribute('data-theme', nuevoTema);
+        localStorage.setItem('db_tema', nuevoTema);
+    }
+
+    function abrirModal() { document.getElementById('historialModal').classList.add('active'); }
+    function cerrarModal() { document.getElementById('historialModal').classList.remove('active'); }
+</script>
+
+</body>
+</html>
